@@ -5,7 +5,12 @@ Created on Sat Dec 29 15:08:34 2018
 @author: ldx
 """
 #!/usr/bin/python
-from gurobipy import *
+from gurobipy import GRB
+from gurobipy import tuplelist
+from gurobipy import tupledict
+from gurobipy import multidict
+from gurobipy import Model
+from gurobipy import quicksum
 import os
 import xlrd
     
@@ -13,7 +18,7 @@ def viewe(path):
     import networkx as nx
     import matplotlib.pyplot as plt
     G = nx.Graph()
-    book = xlrd.open_workbook(os.path.join("..", "data", path))
+    book = xlrd.open_workbook(os.path.join(path))
     sh = book.sheet_by_name("E")
     i = 1
     while True:
@@ -68,10 +73,12 @@ def painte():
         fs = oldf.select(va,vb,'*','*')
         for m in fs:
             for α in range(round(lcmT/oldT[m])):
-                rect = plt.Rectangle((oldφ[m] + α*oldT[m],i-0.5),oldL[m],1,color = colorindex[int(m[2][1:])] )
+                rect = plt.Rectangle((oldφ[m] + α*oldT[m],i-0.5),oldL[m],1,
+                                     color = colorindex[int(m[2][1:])] )
                 ax.add_patch(rect)
-                ax.annotate(m[2]+'.'+str(round(oldρ[m[0],m[1],m[2]])), (oldφ[m] + α*oldT[m] + oldL[m]/2, i), color='black', weight='bold', 
-                            fontsize=12, ha='center', va='center')
+                ax.annotate(m[2]+'.'+str(round(oldρ[m[0],m[1],m[2]])), 
+                            (oldφ[m] + α*oldT[m] + oldL[m]/2, i), color='black', 
+                            weight='bold', fontsize=12, ha='center', va='center')
         i += 1 
     plt.xlim((0, lcmT))     #也可写成plt.xlim(-5, 5) 
     plt.ylim((-0.5, len(E)-0.5)) 
@@ -83,7 +90,7 @@ tur = 0
 batch = 10
 δ = 2.5 
          
-book = xlrd.open_workbook(os.path.join("..", "data", 'cyber.xlsx'))
+book = xlrd.open_workbook(os.path.join('cyber.xlsx'))
 viewe("cyber.xlsx")
 #边集，存储所有双向边
 sh = book.sheet_by_name("E")
@@ -176,8 +183,12 @@ while len(fullS) > tur*batch:
                         if β*T[n] < (α-1)*T[m]:
                             continue
                         σ = md.addVar()
-                        md.addGenConstrIndicator(σ, True, φ[m] - φ[n]  , GRB.LESS_EQUAL , - L[m] - α*T[m] + β*T[n], 'Link Constaints 1') 
-                        md.addGenConstrIndicator(σ, False, φ[n] - φ[m]  , GRB.LESS_EQUAL , - L[n] - β*T[n] + α*T[m], 'Link Constaints 2') 
+                        md.addGenConstrIndicator(σ, True, φ[m] - φ[n]  , 
+                                                 GRB.LESS_EQUAL , - L[m] - α*T[m] + β*T[n], 
+                                                 'Link Constaints 1') 
+                        md.addGenConstrIndicator(σ, False, φ[n] - φ[m]  , 
+                                                 GRB.LESS_EQUAL , - L[n] - β*T[n] + α*T[m], 
+                                                 'Link Constaints 2') 
         for m in fs:
             for n in oldf.select(va,vb,'*','*'):
                 for α in range(round(lcm(T[m],oldT[n])/T[m])):
@@ -187,8 +198,13 @@ while len(fullS) > tur*batch:
                         if β*oldT[n] < (α-1)*T[m]:
                             continue
                         σ = md.addVar()
-                        md.addGenConstrIndicator(σ, True, φ[m], GRB.LESS_EQUAL, - L[m] - α*T[m] + β*oldT[n] + oldφ[n], 'Link Constaints 1') 
-                        md.addGenConstrIndicator(σ, False, -φ[m], GRB.LESS_EQUAL, - oldL[n] - β*oldT[n] - oldφ[n] + α*T[m], 'Link Constaints 2')
+                        md.addGenConstrIndicator(σ, True, φ[m], GRB.LESS_EQUAL, 
+                                                 - L[m] - α*T[m] + β*oldT[n] + oldφ[n], 
+                                                 'Link Constaints 1') 
+                        md.addGenConstrIndicator(σ, False, -φ[m], GRB.LESS_EQUAL, 
+                                                 - oldL[n] - β*oldT[n] - oldφ[n] + α*T[m], 
+                                                 'Link Constaints 2')
+    
     
     for m in f:
         for n in f.select(m[1],'*',m[2],m[3]):
@@ -203,11 +219,15 @@ while len(fullS) > tur*batch:
         for k in Fs[:-1]:
             for l in Fs[Fs.index(k)+1:]: 
                 εlk = md.addVar()
-                md.addGenConstrIndicator(εlk, True, ρ[l] - ρ[k] , GRB.GREATER_EQUAL , 1, 'rho lk Constaints 1') 
-                md.addGenConstrIndicator(εlk, False, ρ[l] - ρ[k] , GRB.LESS_EQUAL , 0, 'rho lk Constaints 2')
+                md.addGenConstrIndicator(εlk, True, ρ[l] - ρ[k] , 
+                                         GRB.GREATER_EQUAL , 1, 'rho lk Constaints 1') 
+                md.addGenConstrIndicator(εlk, False, ρ[l] - ρ[k] , 
+                                         GRB.LESS_EQUAL , 0, 'rho lk Constaints 2')
                 εkl = md.addVar()
-                md.addGenConstrIndicator(εkl, True, ρ[k] - ρ[l] , GRB.GREATER_EQUAL , 1, 'rho kl Constaints 1')
-                md.addGenConstrIndicator(εlk, False, ρ[k] - ρ[l] , GRB.LESS_EQUAL , 0, 'rho kl Constaints 2')
+                md.addGenConstrIndicator(εkl, True, ρ[k] - ρ[l] , 
+                                         GRB.GREATER_EQUAL , 1, 'rho kl Constaints 1')
+                md.addGenConstrIndicator(εlk, False, ρ[k] - ρ[l] , 
+                                         GRB.LESS_EQUAL , 0, 'rho kl Constaints 2')
                 for m in f.select(k[0],k[1],k[2],'*'):
                     for n in f.select(l[0],l[1],l[2],'*'):
                         for α in range(round(lcm(T[m],T[n])/T[m])):
@@ -218,21 +238,37 @@ while len(fullS) > tur*batch:
                                     continue                        
                                 ω = md.addVar(vtype = GRB.BINARY)
                                 ωε = md.addVar()
-                                md.addGenConstrIndicator(ωε, True, ω+εlk+εkl , GRB.GREATER_EQUAL , 1, 'support Constaints 1')
+                                md.addGenConstrIndicator(ωε, True, ω+εlk+εkl , 
+                                                         GRB.GREATER_EQUAL , 1, 
+                                                         'support Constaints 1')
                                 εω = md.addVar()
-                                md.addGenConstrIndicator(εω, True, -ω+εlk+εkl , GRB.GREATER_EQUAL , 0, 'support Constaints 2')
+                                md.addGenConstrIndicator(εω, True, -ω+εlk+εkl , 
+                                                         GRB.GREATER_EQUAL , 0, 
+                                                         'support Constaints 2')
                                 for mp in f.select('*',m[0],m[2],m[3]):
-                                    md.addGenConstrIndicator(ωε, False, φ[n] - φ[mp], GRB.LESS_EQUAL, - δ - β*T[n] + α*T[m], 'Frame Isolation Constraints 1')
+                                    md.addGenConstrIndicator(ωε, False, 
+                                                             φ[n] - φ[mp], 
+                                                             GRB.LESS_EQUAL, 
+                                                             - δ - β*T[n] + α*T[m], 
+                                                             'Frame Isolation Constraints 1')
                                 for np in f.select('*',n[0],n[2],n[3]):
-                                    md.addGenConstrIndicator(εω, False, φ[m] - φ[np], GRB.LESS_EQUAL, - δ - α*T[m] + β*T[n], 'Frame Isolation Constraints 2')
+                                    md.addGenConstrIndicator(εω, False, 
+                                                             φ[m] - φ[np], 
+                                                             GRB.LESS_EQUAL, 
+                                                             - δ - α*T[m] + β*T[n], 
+                                                             'Frame Isolation Constraints 2')
         for k in Fs:
             for l in oldF.select(va,vb,'*'): 
                 εlk = md.addVar()
-                md.addGenConstrIndicator(εlk, True,  - ρ[k] , GRB.GREATER_EQUAL , 1-oldρ[l], 'rho lk Constaints 1') 
-                md.addGenConstrIndicator(εlk, False,  - ρ[k] , GRB.LESS_EQUAL , -oldρ[l], 'rho lk Constaints 2')
+                md.addGenConstrIndicator(εlk, True,  - ρ[k] , GRB.GREATER_EQUAL ,
+                                         1-oldρ[l], 'rho lk Constaints 1') 
+                md.addGenConstrIndicator(εlk, False,  - ρ[k] , GRB.LESS_EQUAL , 
+                                         -oldρ[l], 'rho lk Constaints 2')
                 εkl = md.addVar()
-                md.addGenConstrIndicator(εkl, True, ρ[k]  , GRB.GREATER_EQUAL , 1+oldρ[l], 'rho kl Constaints 1')
-                md.addGenConstrIndicator(εlk, False, ρ[k]  , GRB.LESS_EQUAL , oldρ[l], 'rho kl Constaints 2')
+                md.addGenConstrIndicator(εkl, True, ρ[k]  , GRB.GREATER_EQUAL , 
+                                         1+oldρ[l], 'rho kl Constaints 1')
+                md.addGenConstrIndicator(εlk, False, ρ[k]  , GRB.LESS_EQUAL , 
+                                         oldρ[l], 'rho kl Constaints 2')
                 for m in f.select(k[0],k[1],k[2],'*'):
                     for n in oldf.select(l[0],l[1],l[2],'*'):
                         for α in range(round(lcm(T[m],oldT[n])/T[m])):
@@ -243,17 +279,27 @@ while len(fullS) > tur*batch:
                                     continue                        
                                 ω = md.addVar(vtype = GRB.BINARY)
                                 ωε = md.addVar()
-                                md.addGenConstrIndicator(ωε, True, ω+εlk+εkl , GRB.GREATER_EQUAL , 1, 'support Constaints 1')
+                                md.addGenConstrIndicator(ωε, True, ω+εlk+εkl , 
+                                                         GRB.GREATER_EQUAL , 1, 
+                                                         'support Constaints 1')
                                 εω = md.addVar()
-                                md.addGenConstrIndicator(εω, True, -ω+εlk+εkl , GRB.GREATER_EQUAL , 0, 'support Constaints 2')
+                                md.addGenConstrIndicator(εω, True, -ω+εlk+εkl , 
+                                                         GRB.GREATER_EQUAL , 0, 
+                                                         'support Constaints 2')
                                 for mp in f.select('*',m[0],m[2],m[3]):
-                                    md.addGenConstrIndicator(ωε, False, - φ[mp], GRB.LESS_EQUAL, - δ - β*oldT[n] + α*T[m] - oldφ[n], 'Frame Isolation Constraints 1')
+                                    md.addGenConstrIndicator(ωε, False, - φ[mp], 
+                                                             GRB.LESS_EQUAL, 
+                                                             - δ - β*oldT[n] + α*T[m] - oldφ[n], 
+                                                             'Frame Isolation Constraints 1')
                                 for np in oldf.select('*',n[0],n[2],n[3]):
-                                    md.addGenConstrIndicator(εω, False, φ[m], GRB.LESS_EQUAL, - δ - α*T[m] + β*oldT[n] + oldφ[np], 'Frame Isolation Constraints 2')
+                                    md.addGenConstrIndicator(εω, False, φ[m], 
+                                                             GRB.LESS_EQUAL, 
+                                                             - δ - α*T[m] + β*oldT[n] + oldφ[np], 
+                                                             'Frame Isolation Constraints 2')
                                     
     md.optimize()
     if md.status != GRB.Status.OPTIMAL:
-        print("no dolution")
+        print("no solution")
         break
     for va,vb in E:
         oldκ[va,vb] = κ[va,vb].x 
