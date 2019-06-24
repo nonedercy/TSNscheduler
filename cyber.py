@@ -12,9 +12,19 @@ from gurobipy import multidict
 from gurobipy import Model
 from gurobipy import quicksum
 import matplotlib.pyplot as plt     
-import os
 import networkx as nx
+import os
+import time
 import xlrd
+
+batch = 100
+δ = 2.5 
+source = "txt"
+programming_type = GRB.CONTINUOUS
+
+tur = 0
+fpath = os.path.abspath('..')
+
 def draw(G): 
     plt.rcParams['figure.dpi'] = 100                          
     pos=nx.spring_layout(G)
@@ -90,13 +100,6 @@ def painte():
     plt.yticks(range(0, len(E)), E)
     plt.show()  
 
-batch = 100
-δ = 2.5 
-source = "txt"
-
-tur = 0
-fpath = os.path.abspath('..')
-
 if source == "xlsx":         
     book = xlrd.open_workbook(os.path.join('cyber.xlsx'))
     viewe("cyber.xlsx")
@@ -134,7 +137,7 @@ if source == "xlsx":
         except IndexError:
             break 
 elif source == "txt":
-    with open(fpath+"\\grid\\grid1",'r') as mnet:
+    with open(fpath+"\\grid\\grid7",'r') as mnet:
         grid = mnet.readlines()
         numofnode = int(grid[0])
         numofarc = int(grid[1])
@@ -189,9 +192,9 @@ while len(fullS) > tur*batch:
      
     md = Model('cyber')
     
-    φ = md.addVars(f, name='phi')
-    ρ = md.addVars(F, name='rho')
-    κ = md.addVars(E, name='chi')
+    φ = md.addVars(f, name='phi',vtype = programming_type)
+    ρ = md.addVars(F, name='rho',vtype = programming_type)
+    κ = md.addVars(E, name='chi',vtype = programming_type)
     
     md.setObjective(quicksum(κ[va,vb] for va,vb in E), GRB.MINIMIZE)
     
@@ -267,7 +270,7 @@ while len(fullS) > tur*batch:
                                     break
                                 if β*T[n] < (α-1)*T[m]:
                                     continue                        
-                                ω = md.addVar(vtype = GRB.BINARY)
+                                ω = md.addVar()
                                 ωε = md.addVar()
                                 md.addGenConstrIndicator(ωε, True, ω+εlk+εkl , 
                                                          GRB.GREATER_EQUAL , 1, 
@@ -308,7 +311,7 @@ while len(fullS) > tur*batch:
                                     break
                                 if β*oldT[n] < (α-1)*T[m]:
                                     continue                        
-                                ω = md.addVar(vtype = GRB.BINARY)
+                                ω = md.addVar()
                                 ωε = md.addVar()
                                 md.addGenConstrIndicator(ωε, True, ω+εlk+εkl , 
                                                          GRB.GREATER_EQUAL , 1, 
@@ -327,8 +330,10 @@ while len(fullS) > tur*batch:
                                                              GRB.LESS_EQUAL, 
                                                              - δ - α*T[m] + β*oldT[n] + oldφ[np], 
                                                              'Frame Isolation Constraints 2')
-                                    
+    start_point = time.clock()                                
     md.optimize()
+    elapsed = (time.clock() - start_point)
+    print("Time used: ",elapsed)
     if md.status != GRB.Status.OPTIMAL:
         print("no solution")
         break
@@ -344,6 +349,6 @@ while len(fullS) > tur*batch:
     oldL.update(L)
     oldF += F
     tur += 1
-    printSolution()
-painte()
+    #printSolution()
+#painte()
 #md.write('cyber.lp')
